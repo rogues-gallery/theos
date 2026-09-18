@@ -1,26 +1,34 @@
+// The contents of this prefix header are deprecated. Do not rely on any of the implicit
+// functionality provided by Prefix.pch, such as automatic import of UIKit, HBLog macro,
+// and other iOS-specific convenience macros. Rather, import things you need explicitly.
+//
+// For example:
+// #import <HBLog.h>
+// #import <theos/BackwardsCompat.h>
+//
+// This header will no longer have any effect when used with the iOS 14 or newer SDK. It
+// has already been removed for other platforms, such as macOS and tvOS, and is not used
+// at all for Swift files.
+
 #ifdef DEBUG
 	#define __DEBUG__
 #endif
 
-#ifdef __OBJC__
-	// This block shouldn’t really be in this prefix header, but we can’t remove it without breaking
-	// pretty much everyone’s projects. THEOS_LEAN_AND_MEAN allows for this block to be skipped on a
-	// per-project or per-developer basis. This file is not imported at all when using Swift.
-	#ifndef THEOS_LEAN_AND_MEAN
-		#import <_Prefix/BackwardsCompat.h>
-		#import <Foundation/Foundation.h>
+#if __has_include(<AvailabilityVersions.h>)
+	#include <AvailabilityVersions.h>
+#endif
 
-		#ifdef TARGET_OS_SIMULATOR
-			#define _THEOS_IS_SIMULATOR TARGET_OS_SIMULATOR
-		#else
-			#define _THEOS_IS_SIMULATOR TARGET_IPHONE_SIMULATOR
+#if !defined(__IPHONE_14_0) && !defined(THEOS_LEAN_AND_MEAN)
+	#ifdef __OBJC__
+		#if __has_include(<TargetConditionals.h>)
+			#import <TargetConditionals.h>
 		#endif
-
-		#if TARGET_IPHONE || _THEOS_IS_SIMULATOR
+		#if TARGET_OS_IPHONE
+			#import <theos/BackwardsCompat.h>
+			#import <Foundation/Foundation.h>
 			#import <UIKit/UIKit.h>
-			#import <_Prefix/IOSMacros.h>
+			#import <theos/IOSMacros.h>
+			#import <HBLog.h>
 		#endif
-
-		#import <HBLog.h>
 	#endif
 #endif

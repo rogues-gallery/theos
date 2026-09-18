@@ -1,4 +1,4 @@
-ifeq ($(_THEOS_PACKAGE_RULES_LOADED),)
+ifeq ($(_THEOS_PACKAGE_RULES_LOADED),$(_THEOS_FALSE))
 _THEOS_PACKAGE_RULES_LOADED := 1
 
 ## Packaging Core Rules
@@ -8,8 +8,7 @@ package:: internal-package-check stage before-package internal-package after-pac
 before-package:: $(THEOS_PACKAGE_DIR)
 internal-package::
 ifeq ($(_THEOS_FINAL_PACKAGE),$(_THEOS_TRUE))
-	find $(THEOS_STAGING_DIR) -name \*.png -a ! -type l -exec pincrush -i {} \;
-	find $(THEOS_STAGING_DIR) \( -name \*.plist -or -name \*.strings \) -exec plutil -convert binary1 {} \;
+	$(ECHO_NOTHING)$(THEOS_BIN_PATH)/convert_xml_plist.sh -D $(THEOS_STAGING_DIR)$(ECHO_END)
 endif
 internal-package-check::
 	@:
@@ -21,8 +20,10 @@ after-package::
 THEOS_PACKAGE_NAME :=
 THEOS_PACKAGE_ARCH :=
 THEOS_PACKAGE_BASE_VERSION :=
-# THEOS_PACKAGE_VERSION is set in common.mk (to give its warning.)
 
+export THEOS_PACKAGE_SCHEME THEOS_PACKAGE_INSTALL_PREFIX
+
+$(eval $(call __mod,package.mk))
 -include $(THEOS_MAKE_PATH)/package/$(_THEOS_PACKAGE_FORMAT).mk
 $(eval $(call __mod,package/$(_THEOS_PACKAGE_FORMAT).mk))
 
@@ -56,7 +57,7 @@ ifeq ($(_THEOS_FINAL_PACKAGE),$(_THEOS_TRUE))
 VERSION.EXTRAVERSION = $(if $(PACKAGE_BUILDNAME),+$(PACKAGE_BUILDNAME))
 _THEOS_PACKAGE_DEFAULT_VERSION_FORMAT = $(THEOS_PACKAGE_BASE_VERSION)$(VERSION.EXTRAVERSION)
 else
-VERSION.INC_BUILD_NUMBER = $(shell THEOS_PROJECT_DIR="$(THEOS_PROJECT_DIR)" "$(THEOS_BIN_PATH)/package_version.sh" -N "$(THEOS_PACKAGE_NAME)" -V "$(__BASEVER_FOR_BUILDNUM)")
+VERSION.INC_BUILD_NUMBER = $(shell THEOS_PROJECT_DIR="$(THEOS_PROJECT_DIR)" _THEOS_LOCAL_DATA_DIR="$(_THEOS_LOCAL_DATA_DIR)" "$(THEOS_BIN_PATH)/package_version.sh" -N "$(THEOS_PACKAGE_NAME)" -V "$(__BASEVER_FOR_BUILDNUM)")
 _THEOS_PACKAGE_DEFAULT_VERSION_FORMAT = $(THEOS_PACKAGE_BASE_VERSION)-$(VERSION.INC_BUILD_NUMBER)$(VERSION.EXTRAVERSION)
 endif
 
@@ -78,18 +79,19 @@ install:: before-install internal-install after-install
 internal-install-check::
 # Throw an error if we aren’t aware of any built package yet.
 	@if [[ -z "$(_THEOS_PACKAGE_LAST_FILENAME)" ]]; then \
-		$(PRINT_FORMAT_ERROR) "$(MAKE) install and show require that you build a package before you try to install it." >&2; \
-		exit 1; \
+		$(PRINT_FORMAT_ERROR) "$(MAKE) install and show require that you build a package before you try to install it." >&2; exit 1; \
 	fi
 
 # Throw an error if the package doesn’t exist.
 	@if [[ ! -f "$(_THEOS_PACKAGE_LAST_FILENAME)" ]]; then \
-		$(PRINT_FORMAT_ERROR) "Could not find “$(_THEOS_PACKAGE_LAST_FILENAME)” to install. Aborting." >&2; \
-		exit 1; \
+		$(PRINT_FORMAT_ERROR) "Could not find “$(_THEOS_PACKAGE_LAST_FILENAME)” to install. Aborting." >&2; exit 1; \
 	fi
 
 export TARGET_INSTALL_REMOTE
 _THEOS_INSTALL_TYPE := local
+ifneq ($(THEOS_DEVICE_IP),)
+TARGET_INSTALL_REMOTE = $(_THEOS_TRUE)
+endif # THEOS_DEVICE_IP != ""
 ifeq ($(TARGET_INSTALL_REMOTE),$(_THEOS_TRUE))
 _THEOS_INSTALL_TYPE := remote
 ifeq ($(THEOS_DEVICE_IP),)
@@ -137,6 +139,11 @@ internal-uninstall::
 	@:
 
 internal-after-uninstall::
+ifeq ($(INSTALL_TARGET_PROCESSES),)
+	@:
+else
+	$(ECHO_UNLOADING)install.exec "killall $(INSTALL_TARGET_PROCESSES) 2>/dev/null || true"$(ECHO_END)
+endif
 
 -include $(THEOS_MAKE_PATH)/install/$(_THEOS_PACKAGE_FORMAT)_$(_THEOS_INSTALL_TYPE).mk
 $(eval $(call __mod,install/$(_THEOS_PACKAGE_FORMAT)_$(_THEOS_INSTALL_TYPE).mk))
@@ -145,12 +152,12 @@ endif # _THEOS_PACKAGE_RULES_LOADED
 
 show:: internal-install-check
 ifeq ($(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER),)
-	@$(PRINT_FORMAT_ERROR) "It is not known how to open the file manager on this platform." >&2; exit 1
+	$(ERROR_BEGIN)"It is not known how to open the file manager on this platform."$(ERROR_END)
 endif
 
 # For Cygwin and WSL, call the path translator to ensure we get a Windows path.
 ifeq ($(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER_PATH_TRANSLATOR),)
-	$(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER) "$(shell cat "$(_THEOS_LOCAL_DATA_DIR)/last_package")"
+	$(ECHO_NOTHING)$(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER) "$(shell cat "$(_THEOS_LOCAL_DATA_DIR)/last_package")"$(ECHO_END)
 else
-	$(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER) "$(shell $(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER_PATH_TRANSLATOR) $$(cat "$(_THEOS_LOCAL_DATA_DIR)/last_package"))"
+	$(ECHO_NOTHING)$(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER) "$(shell $(_THEOS_PLATFORM_SHOW_IN_FILE_MANAGER_PATH_TRANSLATOR) $$(cat "$(_THEOS_LOCAL_DATA_DIR)/last_package"))"$(ECHO_END)
 endif

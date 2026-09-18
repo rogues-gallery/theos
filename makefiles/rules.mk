@@ -1,4 +1,4 @@
-ifeq ($(_THEOS_RULES_LOADED),)
+ifeq ($(_THEOS_RULES_LOADED),$(_THEOS_FALSE))
 _THEOS_RULES_LOADED := 1
 
 ifeq ($(THEOS_CURRENT_INSTANCE),)
@@ -23,9 +23,6 @@ endif
 	$(THEOS_BIN_PATH)/logos.pl $(ALL_LOGOSFLAGS) $< > $@
 
 %.m: %.xm
-	$(THEOS_BIN_PATH)/logos.pl $(ALL_LOGOSFLAGS) $< > $@
-
-%.swift: %.xswift
 	$(THEOS_BIN_PATH)/logos.pl $(ALL_LOGOSFLAGS) $< > $@
 
 ifneq ($(THEOS_BUILD_DIR),.)
@@ -54,7 +51,7 @@ $(THEOS_MAKE_PATH)/targets/%/%.mk: ;
 
 ifneq ($(THEOS_PACKAGE_DIR_NAME),)
 $(THEOS_PACKAGE_DIR):
-	@cd $(THEOS_BUILD_DIR); mkdir -p $(THEOS_PACKAGE_DIR_NAME)
+	@mkdir -p $(THEOS_PACKAGE_DIR)
 endif
 
 endif

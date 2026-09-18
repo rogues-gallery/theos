@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 if [[ $TARGET_INSTALL_REMOTE == 1 ]]; then
 	args=(ssh)
 
@@ -15,5 +15,5 @@ if [[ $TARGET_INSTALL_REMOTE == 1 ]]; then
 
 	exec ${args[@]}
 else
-	exec su -c "$@"
+	exec su root -c "$@"
 fi
